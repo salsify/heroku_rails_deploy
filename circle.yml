@@ -1,0 +1,15 @@
+machine:
+  ruby:
+    version:
+      2.3.1
+
+database:
+  override:
+    - echo 'nothing to setup'
+
+test:
+  override:
+    - bundle exec rubocop
+    - bundle exec rspec --format RspecJunitFormatter --out $CIRCLE_TEST_REPORTS/rspec/junit.xml --format progress spec
+  post:
+    - cp -R log $CIRCLE_ARTIFACTS
