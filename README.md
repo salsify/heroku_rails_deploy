@@ -1,31 +1,56 @@
 # HerokuRailsDeploy
 
-Welcome to your new gem! In this directory, you'll find the files you need to be
-able to package up your Ruby library into a gem. Put your Ruby code in the file
-`lib/heroku_rails_deploy`. To experiment with that code, run 
-`bin/console` for an interactive prompt.
+This gem provides a simple Heroku deploy script for Rails applications. Deploys
+following the following steps:
 
-TODO: Delete this and the text above, and describe your gem
+1. Push code to Heroku
+2. If there are pending migrations, run them and restart the Heroku dynos
 
 ## Installation
 
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'heroku_rails_deploy'
+group :development do
+  gem 'heroku_rails_deploy'
+end
 ```
 
-And then execute:
+Then execute:
 
     $ bundle
 
-Or install it yourself as:
+Then run the generator to create the deploy script and configuration file:
 
-    $ gem install heroku_rails_deploy
+    $ rails generate heroku_rails_deploy
+    
+Finally follow the instructions in `config/heroku.yml` to configure the 
+environments/Heroku applications for your project e.g.
+
+```yml
+production: my-app-prod
+staging: my-app-staging
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+From your application's root directory run the `bin/deploy` script with the `--help`
+argument to print usage:
+
+```
+$ bin/deploy --help
+Usage: deploy [options]
+    -e, --environment ENVIRONMENT    The environment to deploy to. Must be in production, staging (default production)
+    -r, --revision REVISION          The git revision to push. (default HEAD)
+    -h, --help                       Show this message
+```
+
+A typical deploy command will look something like:
+```
+$ bin/deploy --environment production
+```
+
+Note you can omit the environment to deploy to your default environment.
 
 ## Development
 
@@ -38,9 +63,13 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 To release a new version, update the version number in `version.rb`, and then
 run `bundle exec rake release`, which will create a git tag for the version,
 push git commits and tags, and push the `.gem` file to
-[Artifactory](https://gems.salsify.com).
+[rubygems.org](https://rubygems.org).
 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
 https://github.com/salsify/heroku_rails_deploy.
+
+## License
+
+The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).
