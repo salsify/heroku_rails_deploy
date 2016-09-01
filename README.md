@@ -12,7 +12,7 @@ Add this line to your application's Gemfile:
 
 ```ruby
 group :development do
-  gem 'heroku_rails_deploy'
+  gem 'heroku_rails_deploy', require: false
 end
 ```
 
