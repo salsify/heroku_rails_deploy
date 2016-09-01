@@ -2,8 +2,9 @@
 
 This gem provides a simple Heroku deploy script for Rails applications. Deploys
 following the following steps:
+
 1. Push code to Heroku
-2. If there are pending migrations, run them and then restart the Heroku dynos
+2. If there are pending migrations, run them and restart the Heroku dynos
 
 ## Installation
 
