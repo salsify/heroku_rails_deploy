@@ -34,7 +34,7 @@ staging: my-app-staging
 
 ## Usage
 
-From your application's root directory run the `deploy` script with the `--help`
+From your application's root directory run the `bin/deploy` script with the `--help`
 argument to print usage:
 
 ```
@@ -63,9 +63,13 @@ To install this gem onto your local machine, run `bundle exec rake install`.
 To release a new version, update the version number in `version.rb`, and then
 run `bundle exec rake release`, which will create a git tag for the version,
 push git commits and tags, and push the `.gem` file to
-[Artifactory](https://gems.salsify.com).
+[rubygems.org](https://rubygems.org).
 
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
 https://github.com/salsify/heroku_rails_deploy.
+
+## License
+
+The gem is available as open source under the terms of the [MIT License](http://opensource.org/licenses/MIT).

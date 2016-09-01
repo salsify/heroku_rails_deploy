@@ -12,13 +12,7 @@ Gem::Specification.new do |spec|
   spec.summary       = 'Simple deployment of Rails app to Heroku'
   spec.description   = spec.summary
   spec.homepage      = 'https://github.com/salsify/heroku_rails_deploy'
-
-  # Set 'allowed_push_post' to control where this gem can be published.
-  if spec.respond_to?(:metadata)
-    spec.metadata['allowed_push_host'] = 'https://gems.salsify.com'
-  else
-    raise 'RubyGems 2.0 or newer is required to protect against public gem pushes.'
-  end
+  spec.license       = 'MIT'
 
   spec.files         = `git ls-files -z`.split("\x0").reject { |f| f.match(%r{^(test|spec|features)/}) }
   spec.bindir        = 'bin'
@@ -28,7 +22,6 @@ Gem::Specification.new do |spec|
   spec.add_runtime_dependency 'rails'
 
   spec.add_development_dependency 'bundler', '~> 1.12'
-  spec.add_development_dependency 'salsify_gem'
   spec.add_development_dependency 'rake', '~> 10.0'
   spec.add_development_dependency 'rspec', '~> 3.4'
   spec.add_development_dependency 'salsify_rubocop', '~> 0.42.0'

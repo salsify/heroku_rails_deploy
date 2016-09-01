@@ -3,9 +3,9 @@
 #
 # <environment>: <heroku app name>
 #
-# For example:
-#
-# staging: my-service-staging
-#
 # The first environment mentioned will be the default
-# used for deploys that don't specify an environment
+# used for deploys that don't specify an environment.
+#
+# TODO: Update for your desired environments/Heroku applications
+# staging: my-service-staging
+# production: my-service-production
