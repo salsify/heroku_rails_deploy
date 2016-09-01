@@ -1,0 +1,11 @@
+# A map from environment name to Heroku application name.
+# Entries should be of the form:
+#
+# <environment>: <heroku app name>
+#
+# For example:
+#
+# staging: my-service-staging
+#
+# The first environment mentioned will be the default
+# used for deploys that don't specify an environment
