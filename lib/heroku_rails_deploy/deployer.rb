@@ -3,6 +3,8 @@ require 'yaml'
 
 module HerokuRailsDeploy
   class Deployer
+    PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
+
     attr_reader :config_file, :args
 
     class Options < Struct.new(:environment, :revision)
@@ -45,7 +47,7 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
-      raise 'Only master can be deployed to production' if options.environment == 'production' && production_branch?
+      raise 'Only master, release or hotfix branches can be deployed to production' if options.environment == 'production' && !production_branch?
 
       puts "Pushing code to Heroku app #{app_name} for environment #{options.environment}"
       push_code(app_name, options.revision)
@@ -61,7 +63,6 @@ module HerokuRailsDeploy
       end
     end
 
-    PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
     def production_branch?
       git_branch_name.match(PRODUCTION_BRANCH_REGEX)
     end

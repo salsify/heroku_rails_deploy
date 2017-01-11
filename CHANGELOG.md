@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.2.1
+- Fixes bug in checking for valid production deploy
+
 ## v0.2.0
 - Can only deploy master or gitflow prefixed branches (hotfix/.+ and release/.+)
 
