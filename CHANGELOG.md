@@ -1,4 +1,7 @@
 # heroku_rails_deploy
 
+## v0.2.0
+- Can only deploy master or gitflow prefixed branches (hotfix/.+ and release/.+)
+
 ## v0.1.0
 - Initial version

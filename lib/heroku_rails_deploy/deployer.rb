@@ -45,6 +45,8 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
+      raise 'Only master can be deployed to production' if options.environment == 'production' && production_branch?
+
       puts "Pushing code to Heroku app #{app_name} for environment #{options.environment}"
       push_code(app_name, options.revision)
 
@@ -59,8 +61,17 @@ module HerokuRailsDeploy
       end
     end
 
+    PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
+    def production_branch?
+      git_branch_name.match(PRODUCTION_BRANCH_REGEX)
+    end
+
     def push_code(app_name, revision)
       run_command!("git push --force git@heroku.com:#{app_name}.git #{revision}:master")
+    end
+
+    def git_branch_name
+      run_command('git rev-parse --abbrev-ref HEAD')
     end
 
     def run_migrations(app_name)
