@@ -72,7 +72,7 @@ module HerokuRailsDeploy
     end
 
     def git_branch_name
-      run_command('git rev-parse --abbrev-ref HEAD')
+      `git rev-parse --abbrev-ref HEAD`.strip
     end
 
     def run_migrations(app_name)

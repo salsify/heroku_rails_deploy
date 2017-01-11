@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.2.2
+- Fixes bug in getting branch name from executing system command
+
 ## v0.2.1
 - Fixes bug in checking for valid production deploy
 
