@@ -1,4 +1,5 @@
 require 'optparse'
+require 'shellwords'
 require 'yaml'
 
 module HerokuRailsDeploy
@@ -47,7 +48,7 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
-      raise 'Only master, release or hotfix branches can be deployed to production' if options.environment == 'production' && !production_branch?
+      raise 'Only master, release or hotfix branches can be deployed to production' if options.environment == 'production' && !production_branch?(options.revision)
 
       puts "Pushing code to Heroku app #{app_name} for environment #{options.environment}"
       push_code(app_name, options.revision)
@@ -63,16 +64,18 @@ module HerokuRailsDeploy
       end
     end
 
-    def production_branch?
-      git_branch_name.match(PRODUCTION_BRANCH_REGEX)
+    def production_branch?(revision)
+      git_branch_name(revision).match(PRODUCTION_BRANCH_REGEX)
     end
 
     def push_code(app_name, revision)
       run_command!("git push --force git@heroku.com:#{app_name}.git #{revision}:master")
     end
 
-    def git_branch_name
-      run_command('git rev-parse --abbrev-ref HEAD')
+    def git_branch_name(revision)
+      branch_name = `git rev-parse --abbrev-ref #{Shellwords.escape(revision)}`.strip
+      raise "Unable to get branch for #{revision}" unless $?.to_i == 0
+      branch_name
     end
 
     def run_migrations(app_name)
