@@ -111,9 +111,9 @@ module HerokuRailsDeploy
     end
 
     def git_branch_name(revision)
-      branch_name = `git rev-parse --abbrev-ref #{Shellwords.escape(revision)}`.strip
-      raise "Unable to get branch for #{revision}" unless $CHILD_STATUS.to_i.zero?
-      branch_name
+      run_command!("git rev-parse --abbrev-ref #{Shellwords.escape(revision)}", quiet: true).strip
+    rescue
+      raise "Unable to get branch for #{revision}"
     end
 
     def run_migrations(app_name)
@@ -129,19 +129,19 @@ module HerokuRailsDeploy
     end
 
     def run_heroku_command!(app_name, command)
-      run_heroku_command(app_name, command, success: true)
+      run_heroku_command(app_name, command, validate: true)
     rescue
       raise "Heroku command '#{command}' failed"
     end
 
-    def run_heroku_command(app_name, command, success: nil)
+    def run_heroku_command(app_name, command, validate: nil)
       cli_command = "heroku #{command} --app #{app_name}"
       if command.start_with?('run ')
         # If we're running a shell command, return the underlying
         # shell command exit code
         cli_command << ' --exit-code'
       end
-      run_command(cli_command, success: success)
+      run_command(cli_command, validate: validate)
     end
 
     def registry_url(app_name)
@@ -175,15 +175,15 @@ module HerokuRailsDeploy
     end
 
     def run_command!(command, print_command: nil, quiet: false)
-      run_command(command, print_command: print_command, quiet: quiet, success: true)
+      run_command(command, print_command: print_command, quiet: quiet, validate: true)
     end
 
-    def run_command(command, print_command: nil, success: nil, quiet: false)
+    def run_command(command, print_command: nil, validate: nil, quiet: false)
       printed_command = print_command || command
       puts printed_command unless quiet
       output = Bundler.with_clean_env { `#{command}` }
       exit_status = $CHILD_STATUS.exitstatus
-      raise "Command '#{printed_command}' failed" if success && exit_status.nonzero?
+      raise "Command '#{printed_command}' failed" if validate && exit_status.nonzero?
       output
     end
   end
