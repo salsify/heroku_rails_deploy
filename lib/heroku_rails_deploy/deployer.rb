@@ -62,8 +62,7 @@ module HerokuRailsDeploy
 
       raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
 
-      uncommitted_changes = `git status --porcelain`
-      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
+      no_uncommitted_changes!
 
       puts "Deploying to Heroku app #{app_name} for environment #{options.environment}"
 
@@ -102,6 +101,11 @@ module HerokuRailsDeploy
       git_branch_name(revision).match(PRODUCTION_BRANCH_REGEX)
     end
 
+    def no_uncommitted_changes!
+      uncommitted_changes = run_command!('git status --porcelain', quiet: true)
+      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
+    end
+
     def push_code(app_name, revision)
       run_command!("git push --force #{app_remote(app_name)} #{revision}:master")
     end
@@ -125,31 +129,29 @@ module HerokuRailsDeploy
     end
 
     def run_heroku_command!(app_name, command)
-      success = run_heroku_command(app_name, command)
-      raise "Heroku command '#{command}' failed" unless success
+      run_heroku_command(app_name, command, success: true)
+    rescue
+      raise "Heroku command '#{command}' failed"
     end
 
-    def run_heroku_command(app_name, command)
+    def run_heroku_command(app_name, command, success: nil)
       cli_command = "heroku #{command} --app #{app_name}"
       if command.start_with?('run ')
         # If we're running a shell command, return the underlying
         # shell command exit code
         cli_command << ' --exit-code'
       end
-      run_command(cli_command)
+      run_command(cli_command, success: success)
     end
 
     def registry_url(app_name)
-      result = Bundler.with_clean_env { `heroku config -a #{app_name} | grep AVRO_SCHEMA_REGISTRY_URL:` }
-      exit_status = $CHILD_STATUS.exitstatus
-      raise "Heroku command to determine schema registry URL failed with status #{exit_status}" unless exit_status.zero?
+      result = run_command!("heroku config -a #{app_name} | grep AVRO_SCHEMA_REGISTRY_URL:", quiet: true)
       result.split.last
     end
 
     def register_avro_schemas!(registry_url, schemas)
       cmd = "rake avro:register_schemas schemas=#{schemas.join(',')}"
-      success = Bundler.with_clean_env { system("DEPLOYMENT_SCHEMA_REGISTRY_URL=#{registry_url} #{cmd}") }
-      raise "Command '#{cmd}' failed" unless success
+      run_command!("DEPLOYMENT_SCHEMA_REGISTRY_URL=#{registry_url} #{cmd}", print_command: cmd)
     end
 
     def list_pending_schemas(app_name)
@@ -157,29 +159,32 @@ module HerokuRailsDeploy
     end
 
     def changed_files(app_name)
-      `git diff --name-only #{remote_commit(app_name)}..#{current_commit}`.split("\n").map(&:strip)
+      run_command("git diff --name-only #{remote_commit(app_name)}..#{current_commit}", quiet: true).split("\n").map(&:strip)
     end
 
     def current_commit
-      `git log --pretty=format:'%H' -n 1`
+      run_command!("git log --pretty=format:'%H' -n 1", quiet: true)
     end
 
     def remote_commit(app_name)
-      `git ls-remote --heads #{app_remote(app_name)} master`.split.first
+      run_command!("git ls-remote --heads #{app_remote(app_name)} master", quiet: true).split.first
     end
 
     def app_remote(app_name)
       "git@heroku.com:#{app_name}.git"
     end
 
-    def run_command!(command)
-      success = run_command(command)
-      raise "Command '#{command}' failed" unless success
+    def run_command!(command, print_command: nil, quiet: false)
+      run_command(command, print_command: print_command, quiet: quiet, success: true)
     end
 
-    def run_command(command)
-      puts command
-      Bundler.with_clean_env { system(command) }
+    def run_command(command, print_command: nil, success: nil, quiet: false)
+      printed_command = print_command || command
+      puts printed_command unless quiet
+      output = Bundler.with_clean_env { `#{command}` }
+      exit_status = $CHILD_STATUS.exitstatus
+      raise "Command '#{printed_command}' failed" if success && exit_status.nonzero?
+      output
     end
   end
 end
