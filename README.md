@@ -43,8 +43,8 @@ $ bin/deploy --help
 Usage: deploy [options]
     -e, --environment ENVIRONMENT    The environment to deploy to. Must be in production, staging (default production)
     -r, --revision REVISION          The git revision to push. (default HEAD)
-        --register-schemas           Force the registration of Avro schemas when deploying to a non-production environment.
-        --skip-schemas               Skip the registration of Avro schemas when deploying to production.
+        --register-avro-schemas      Force the registration of Avro schemas when deploying to a non-production environment.
+        --skip-avro-schemas          Skip the registration of Avro schemas when deploying to production.
     -h, --help                       Show this message
 ```
 

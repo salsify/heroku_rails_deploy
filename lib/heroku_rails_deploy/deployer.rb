@@ -6,10 +6,11 @@ require 'english'
 module HerokuRailsDeploy
   class Deployer
     PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
+    PRODUCTION = 'production'.freeze
 
     attr_reader :config_file, :args
 
-    class Options < Struct.new(:environment, :revision, :register_schemas, :skip_schemas)
+    class Options < Struct.new(:environment, :revision, :register_avro_schemas, :skip_avro_schemas)
       def self.create_default(app_registry)
         new(app_registry.keys.first, 'HEAD')
       end
@@ -43,14 +44,14 @@ module HerokuRailsDeploy
           options.revision = revision
         end
 
-        parser.on('--register-schemas',
-                  'Force the registration of Avro schemas when deploying to a non-production environment.') do |register_schemas|
-          options.register_schemas = register_schemas
+        parser.on('--register-avro-schemas',
+                  'Force the registration of Avro schemas when deploying to a non-production environment.') do |register_avro_schemas|
+          options.register_avro_schemas = register_avro_schemas
         end
 
-        parser.on('--skip-schemas',
-                  'Skip the registration of Avro schemas when deploying to production.') do |skip_schemas|
-          options.skip_schemas = skip_schemas
+        parser.on('--skip-avro-schemas',
+                  'Skip the registration of Avro schemas when deploying to production.') do |skip_avro_schemas|
+          options.skip_avro_schemas = skip_avro_schemas
         end
       end.parse!(args)
 
@@ -59,14 +60,14 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
-      raise 'Only master, release or hotfix branches can be deployed to production' if options.environment == 'production' && !production_branch?(options.revision)
+      raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
 
       uncommitted_changes = `git status --porcelain`
       raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
 
-      puts "Pushing code to Heroku app #{app_name} for environment #{options.environment}"
+      puts "Deploying to Heroku app #{app_name} for environment #{options.environment}"
 
-      if !options.skip_schemas && (options.environment == 'production' || options.register_schemas)
+      if !options.skip_avro_schemas && (production?(options) || options.register_avro_schemas)
         puts 'Checking for pending Avro schemas'
         pending_schemas = list_pending_schemas(app_name)
         if pending_schemas.any?
@@ -77,6 +78,7 @@ module HerokuRailsDeploy
         end
       end
 
+      puts 'Pushing code'
       push_code(app_name, options.revision)
 
       puts 'Checking for pending migrations'
@@ -91,6 +93,10 @@ module HerokuRailsDeploy
     end
 
     private
+
+    def production?(options)
+      options.environment == PRODUCTION
+    end
 
     def production_branch?(revision)
       git_branch_name(revision).match(PRODUCTION_BRANCH_REGEX)
