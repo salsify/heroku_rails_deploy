@@ -3,8 +3,9 @@
 This gem provides a simple Heroku deploy script for Rails applications. Deploys
 following the following steps:
 
-1. Push code to Heroku
-2. If there are pending migrations, run them and restart the Heroku dynos
+1. Push updated Avro schemas to a schema registry
+2. Push code to Heroku
+3. If there are pending migrations, run them and restart the Heroku dynos
 
 ## Installation
 
@@ -42,6 +43,8 @@ $ bin/deploy --help
 Usage: deploy [options]
     -e, --environment ENVIRONMENT    The environment to deploy to. Must be in production, staging (default production)
     -r, --revision REVISION          The git revision to push. (default HEAD)
+        --register-schemas           Force the registration of Avro schemas when deploying to a non-production environment.
+        --skip-schemas               Skip the registration of Avro schemas when deploying to production.
     -h, --help                       Show this message
 ```
 
