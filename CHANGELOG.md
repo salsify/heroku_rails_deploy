@@ -1,5 +1,9 @@
 # heroku_rails_deploy
 
+## v0.3.0
+- Add support for Avro schema registration during deployment.
+- Refuse to deploy when there are uncommitted changes.
+
 ## v0.2.2
 - Fixes bug in getting branch name from executing system command
 

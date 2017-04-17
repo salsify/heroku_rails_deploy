@@ -1,14 +1,16 @@
 require 'optparse'
 require 'shellwords'
 require 'yaml'
+require 'english'
 
 module HerokuRailsDeploy
   class Deployer
     PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
+    PRODUCTION = 'production'.freeze
 
     attr_reader :config_file, :args
 
-    class Options < Struct.new(:environment, :revision)
+    class Options < Struct.new(:environment, :revision, :register_avro_schemas, :skip_avro_schemas)
       def self.create_default(app_registry)
         new(app_registry.keys.first, 'HEAD')
       end
@@ -41,6 +43,16 @@ module HerokuRailsDeploy
                   'The git revision to push. (default HEAD)') do |revision|
           options.revision = revision
         end
+
+        parser.on('--register-avro-schemas',
+                  'Force the registration of Avro schemas when deploying to a non-production environment.') do |register_avro_schemas|
+          options.register_avro_schemas = register_avro_schemas
+        end
+
+        parser.on('--skip-avro-schemas',
+                  'Skip the registration of Avro schemas when deploying to production.') do |skip_avro_schemas|
+          options.skip_avro_schemas = skip_avro_schemas
+        end
       end.parse!(args)
 
       app_name = app_registry.fetch(options.environment) do
@@ -48,9 +60,24 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
-      raise 'Only master, release or hotfix branches can be deployed to production' if options.environment == 'production' && !production_branch?(options.revision)
+      raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
 
-      puts "Pushing code to Heroku app #{app_name} for environment #{options.environment}"
+      no_uncommitted_changes!
+
+      puts "Deploying to Heroku app #{app_name} for environment #{options.environment}"
+
+      if !options.skip_avro_schemas && (production?(options) || options.register_avro_schemas)
+        puts 'Checking for pending Avro schemas'
+        pending_schemas = list_pending_schemas(app_name)
+        if pending_schemas.any?
+          puts 'Registering Avro schemas'
+          register_avro_schemas!(registry_url(app_name), pending_schemas)
+        else
+          puts 'No pending Avro schemas'
+        end
+      end
+
+      puts 'Pushing code'
       push_code(app_name, options.revision)
 
       puts 'Checking for pending migrations'
@@ -64,18 +91,29 @@ module HerokuRailsDeploy
       end
     end
 
+    private
+
+    def production?(options)
+      options.environment == PRODUCTION
+    end
+
     def production_branch?(revision)
       git_branch_name(revision).match(PRODUCTION_BRANCH_REGEX)
     end
 
+    def no_uncommitted_changes!
+      uncommitted_changes = run_command!('git status --porcelain', quiet: true)
+      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
+    end
+
     def push_code(app_name, revision)
-      run_command!("git push --force git@heroku.com:#{app_name}.git #{revision}:master")
+      run_command!("git push --force #{app_remote(app_name)} #{revision}:master")
     end
 
     def git_branch_name(revision)
-      branch_name = `git rev-parse --abbrev-ref #{Shellwords.escape(revision)}`.strip
-      raise "Unable to get branch for #{revision}" unless $?.to_i == 0
-      branch_name
+      run_command!("git rev-parse --abbrev-ref #{Shellwords.escape(revision)}", quiet: true).strip
+    rescue
+      raise "Unable to get branch for #{revision}"
     end
 
     def run_migrations(app_name)
@@ -91,28 +129,62 @@ module HerokuRailsDeploy
     end
 
     def run_heroku_command!(app_name, command)
-      success = run_heroku_command(app_name, command)
-      raise "Heroku command '#{command}' failed" unless success
+      run_heroku_command(app_name, command, validate: true)
+    rescue
+      raise "Heroku command '#{command}' failed"
     end
 
-    def run_heroku_command(app_name, command)
+    def run_heroku_command(app_name, command, validate: nil)
       cli_command = "heroku #{command} --app #{app_name}"
       if command.start_with?('run ')
         # If we're running a shell command, return the underlying
         # shell command exit code
         cli_command << ' --exit-code'
       end
-      run_command(cli_command)
+      run_command(cli_command, validate: validate)
     end
 
-    def run_command!(command)
-      success = run_command(command)
-      raise "Command '#{command}' failed" unless success
+    def registry_url(app_name)
+      result = run_command!("heroku config -a #{app_name} | grep AVRO_SCHEMA_REGISTRY_URL:", quiet: true)
+      result.split.last
     end
 
-    def run_command(command)
-      puts command
-      Bundler.with_clean_env { system(command) }
+    def register_avro_schemas!(registry_url, schemas)
+      cmd = "rake avro:register_schemas schemas=#{schemas.join(',')}"
+      run_command!("DEPLOYMENT_SCHEMA_REGISTRY_URL=#{registry_url} #{cmd}", print_command: cmd)
+    end
+
+    def list_pending_schemas(app_name)
+      changed_files(app_name).select { |filename| /\.avsc$/ =~ filename }
+    end
+
+    def changed_files(app_name)
+      run_command("git diff --name-only #{remote_commit(app_name)}..#{current_commit}", quiet: true).split("\n").map(&:strip)
+    end
+
+    def current_commit
+      run_command!("git log --pretty=format:'%H' -n 1", quiet: true)
+    end
+
+    def remote_commit(app_name)
+      run_command!("git ls-remote --heads #{app_remote(app_name)} master", quiet: true).split.first
+    end
+
+    def app_remote(app_name)
+      "git@heroku.com:#{app_name}.git"
+    end
+
+    def run_command!(command, print_command: nil, quiet: false)
+      run_command(command, print_command: print_command, quiet: quiet, validate: true)
+    end
+
+    def run_command(command, print_command: nil, validate: nil, quiet: false)
+      printed_command = print_command || command
+      puts printed_command unless quiet
+      output = Bundler.with_clean_env { `#{command}` }
+      exit_status = $CHILD_STATUS.exitstatus
+      raise "Command '#{printed_command}' failed" if validate && exit_status.nonzero?
+      output
     end
   end
 end
