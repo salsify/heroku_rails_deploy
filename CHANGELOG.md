@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.4.0
+- Refactor to expose environment from `Deployer`.
+
 ## v0.3.0
 - Add support for Avro schema registration during deployment.
 - Refuse to deploy when there are uncommitted changes.
