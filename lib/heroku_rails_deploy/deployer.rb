@@ -2,13 +2,17 @@ require 'optparse'
 require 'shellwords'
 require 'yaml'
 require 'english'
+require 'private_attr'
 
 module HerokuRailsDeploy
   class Deployer
+    extend PrivateAttr
+
     PRODUCTION_BRANCH_REGEX = /\A((master)|(release\/.+)|(hotfix\/.+))\z/
     PRODUCTION = 'production'.freeze
 
     attr_reader :config_file, :args
+    private_attr_reader :options, :app_registry
 
     class Options < Struct.new(:environment, :revision, :register_avro_schemas, :skip_avro_schemas)
       def self.create_default(app_registry)
@@ -17,14 +21,59 @@ module HerokuRailsDeploy
     end
 
     def initialize(config_file, args)
+      raise "Missing config file #{config_file}" unless File.file?(config_file)
+      @app_registry = YAML.load(File.read(config_file))
       @config_file = config_file
       @args = args
+      @options = parse_options
     end
 
     def run
-      raise "Missing config file #{config_file}" unless File.file?(config_file)
-      app_registry = YAML.load(File.read(config_file))
+      return unless options
 
+      app_name = app_registry.fetch(options.environment) do
+        raise OptionParser::InvalidArgument.new("Invalid environment '#{options.environment}'. " \
+          "Must be in #{app_registry.keys.join(', ')}")
+      end
+
+      raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
+
+      no_uncommitted_changes!
+
+      puts "Deploying to Heroku app #{app_name} for environment #{options.environment}"
+
+      if !options.skip_avro_schemas && (production? || options.register_avro_schemas)
+        puts 'Checking for pending Avro schemas'
+        pending_schemas = list_pending_schemas(app_name)
+        if pending_schemas.any?
+          puts 'Registering Avro schemas'
+          register_avro_schemas!(registry_url(app_name), pending_schemas)
+        else
+          puts 'No pending Avro schemas'
+        end
+      end
+
+      puts 'Pushing code'
+      push_code(app_name, options.revision)
+
+      puts 'Checking for pending migrations'
+      if pending_migrations?(app_name)
+        puts 'Running migrations'
+        run_migrations(app_name)
+        puts 'Restarting dynos'
+        restart_dynos(app_name)
+      else
+        puts 'No migrations required'
+      end
+    end
+
+    def production?
+      options.try(:environment) == PRODUCTION
+    end
+
+    private
+
+    def parse_options
       options = Options.create_default(app_registry)
       OptionParser.new do |parser|
         parser.on_tail('-h', '--help', 'Show this message') do
@@ -55,46 +104,7 @@ module HerokuRailsDeploy
         end
       end.parse!(args)
 
-      app_name = app_registry.fetch(options.environment) do
-        raise OptionParser::InvalidArgument.new("Invalid environment '#{options.environment}'. " \
-          "Must be in #{app_registry.keys.join(', ')}")
-      end
-
-      raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
-
-      no_uncommitted_changes!
-
-      puts "Deploying to Heroku app #{app_name} for environment #{options.environment}"
-
-      if !options.skip_avro_schemas && (production?(options) || options.register_avro_schemas)
-        puts 'Checking for pending Avro schemas'
-        pending_schemas = list_pending_schemas(app_name)
-        if pending_schemas.any?
-          puts 'Registering Avro schemas'
-          register_avro_schemas!(registry_url(app_name), pending_schemas)
-        else
-          puts 'No pending Avro schemas'
-        end
-      end
-
-      puts 'Pushing code'
-      push_code(app_name, options.revision)
-
-      puts 'Checking for pending migrations'
-      if pending_migrations?(app_name)
-        puts 'Running migrations'
-        run_migrations(app_name)
-        puts 'Restarting dynos'
-        restart_dynos(app_name)
-      else
-        puts 'No migrations required'
-      end
-    end
-
-    private
-
-    def production?(options)
-      options.environment == PRODUCTION
+      options
     end
 
     def production_branch?(revision)
