@@ -36,7 +36,7 @@ module HerokuRailsDeploy
           "Must be in #{app_registry.keys.join(', ')}")
       end
 
-      raise 'Only master, release or hotfix branches can be deployed to production' if production?(options) && !production_branch?(options.revision)
+      raise 'Only master, release or hotfix branches can be deployed to production' if production? && !production_branch?(options.revision)
 
       no_uncommitted_changes!
 

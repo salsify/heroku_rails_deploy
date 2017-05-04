@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.4.1
+- Fix bug checking environment.
+
 ## v0.4.0
 - Refactor to expose environment from `Deployer`.
 
