@@ -1,3 +1,3 @@
 module HerokuRailsDeploy
-  VERSION = '0.4.2.rc0'.freeze
+  VERSION = '0.4.2'.freeze
 end
