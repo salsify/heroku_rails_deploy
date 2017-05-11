@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.4.2
+- Fix test for pending migrations.
+
 ## v0.4.1
 - Fix bug checking environment.
 

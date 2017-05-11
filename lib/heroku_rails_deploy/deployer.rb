@@ -135,7 +135,10 @@ module HerokuRailsDeploy
     end
 
     def pending_migrations?(app_name)
-      !run_heroku_command(app_name, 'run rake db:abort_if_pending_migrations')
+      run_heroku_command!(app_name, 'run rake db:abort_if_pending_migrations')
+      false
+    rescue
+      true
     end
 
     def run_heroku_command!(app_name, command)
