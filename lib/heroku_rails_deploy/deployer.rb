@@ -200,7 +200,7 @@ module HerokuRailsDeploy
         output = Bundler.with_clean_env { `#{command}` }
       end
       success = $CHILD_STATUS.success?
-      raise "Command '#{printed_command}' failed" if validate && !success
+      raise "Command '#{printed_command}' failed#{output && output.strip != '' ? ", output: #{output}" : ''}" if validate && !success
       display_output ? success : output
     end
   end
