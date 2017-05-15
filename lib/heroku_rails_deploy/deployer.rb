@@ -135,10 +135,7 @@ module HerokuRailsDeploy
     end
 
     def pending_migrations?(app_name)
-      run_heroku_command!(app_name, 'run rake db:abort_if_pending_migrations')
-      false
-    rescue
-      true
+      run_heroku_command(app_name, 'run rake db:abort_if_pending_migrations')
     end
 
     def run_heroku_command!(app_name, command)
@@ -153,8 +150,11 @@ module HerokuRailsDeploy
         # If we're running a shell command, return the underlying
         # shell command exit code
         cli_command << ' --exit-code'
+        display_output = true
+      else
+        display_output = false
       end
-      run_command(cli_command, validate: validate)
+      run_command(cli_command, validate: validate, display_output: display_output)
     end
 
     def registry_url(app_name)
@@ -187,17 +187,21 @@ module HerokuRailsDeploy
       "git@heroku.com:#{app_name}.git"
     end
 
-    def run_command!(command, print_command: nil, quiet: false)
-      run_command(command, print_command: print_command, quiet: quiet, validate: true)
+    def run_command!(command, print_command: nil, quiet: false, display_output: false)
+      run_command(command, print_command: print_command, quiet: quiet, display_output: display_output, validate: true)
     end
 
-    def run_command(command, print_command: nil, validate: nil, quiet: false)
+    def run_command(command, print_command: nil, validate: nil, quiet: false, display_output: false)
       printed_command = print_command || command
       puts printed_command unless quiet
-      output = Bundler.with_clean_env { `#{command}` }
+      if display_output
+        Bundler.with_clean_env { system(command) }
+      else
+        output = Bundler.with_clean_env { `#{command}` }
+      end
       exit_status = $CHILD_STATUS.exitstatus
-      raise "Command '#{printed_command}' failed" if validate && exit_status.nonzero?
-      output
+      raise "Command '#{printed_command}' failed" if validate && !exit_status.success?
+      display_output ? exit_status.success? : output
     end
   end
 end
