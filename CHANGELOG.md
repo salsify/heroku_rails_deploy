@@ -1,5 +1,8 @@
 # heroku_rails_deploy
 
+## v0.4.3
+- Display output while running migration commands.
+
 ## v0.4.2
 - Fix test for pending migrations.
 
