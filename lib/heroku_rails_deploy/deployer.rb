@@ -1,7 +1,7 @@
 require 'optparse'
 require 'shellwords'
 require 'yaml'
-require 'english'
+require 'English'
 require 'private_attr'
 
 module HerokuRailsDeploy
