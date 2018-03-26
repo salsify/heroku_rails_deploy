@@ -3,6 +3,8 @@ require 'shellwords'
 require 'yaml'
 require 'English'
 require 'private_attr'
+require 'active_support/core_ext/object/try'
+require 'active_support/core_ext/object/blank'
 
 module HerokuRailsDeploy
   class Deployer
@@ -68,7 +70,7 @@ module HerokuRailsDeploy
     end
 
     def production?
-      options.dig(:environment) == PRODUCTION
+      options.try(:environment) == PRODUCTION
     end
 
     private
@@ -113,7 +115,7 @@ module HerokuRailsDeploy
 
     def no_uncommitted_changes!
       uncommitted_changes = run_command!('git status --porcelain', quiet: true)
-      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.empty?
+      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
     end
 
     def push_code(app_name, revision)
