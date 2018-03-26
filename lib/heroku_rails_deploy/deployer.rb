@@ -68,7 +68,7 @@ module HerokuRailsDeploy
     end
 
     def production?
-      options.try(:environment) == PRODUCTION
+      options.dig(:environment) == PRODUCTION
     end
 
     private
@@ -113,7 +113,7 @@ module HerokuRailsDeploy
 
     def no_uncommitted_changes!
       uncommitted_changes = run_command!('git status --porcelain', quiet: true)
-      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.blank?
+      raise "There are uncommitted changes:\n#{uncommitted_changes}" unless uncommitted_changes.empty?
     end
 
     def push_code(app_name, revision)
@@ -184,7 +184,7 @@ module HerokuRailsDeploy
     end
 
     def app_remote(app_name)
-      "git@heroku.com:#{app_name}.git"
+      "https://git.heroku.com/#{app_name}.git"
     end
 
     def run_command!(command, print_command: nil, quiet: false, display_output: false)
