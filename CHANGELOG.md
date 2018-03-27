@@ -1,5 +1,13 @@
 # heroku_rails_deploy
 
+## v0.4.5
+- Use public gem server
+- Use HTTP git remote for Heroku
+- Add missing active_support requires 
+
+## v0.4.4
+- Add missing require of English
+
 ## v0.4.3
 - Display output while running migration commands.
 
