@@ -3,6 +3,8 @@ require 'shellwords'
 require 'yaml'
 require 'English'
 require 'private_attr'
+require 'active_support/core_ext/object/try'
+require 'active_support/core_ext/object/blank'
 
 module HerokuRailsDeploy
   class Deployer
@@ -184,7 +186,7 @@ module HerokuRailsDeploy
     end
 
     def app_remote(app_name)
-      "git@heroku.com:#{app_name}.git"
+      "https://git.heroku.com/#{app_name}.git"
     end
 
     def run_command!(command, print_command: nil, quiet: false, display_output: false)
